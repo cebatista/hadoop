@@ -17,92 +17,91 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-public class TopNHashTag extends Configured implements Tool
-{
-    public static class TopNMapper extends Mapper<Object, Text, NullWritable, Text>
-    {
-        private TreeMap<Integer, Text> topN = new TreeMap<>();
+public class TopNHashTag extends Configured implements Tool{
+	
+	public static class TopNMapper extends Mapper<Object, Text, NullWritable, Text>{
+		private TreeMap<Integer, Text> topN = new TreeMap<>();
 
-        private final static IntWritable one = new IntWritable(1);
-        private Text word = new Text();
-        @Override
-        public void map(Object key, Text value, Context context)
-                throws IOException, InterruptedException {
-            // (hashtag, count) tuple
-            
-            Configuration conf = context.getConfiguration();
-            int qtd = Integer.parseInt(conf.get("qtd"));
-                        
-            String[] words = value.toString().toLowerCase().split("\t") ;
-                if (words.length < 2) {
-                    return;
-            }
+		private final static IntWritable one = new IntWritable(1);
+		private Text word = new Text();
+		@Override
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			// (hashtag, count) tuple
 
-            topN.put(Integer.parseInt(words[1].toLowerCase()), new Text(value));
+			Configuration conf = context.getConfiguration();
+			int qtd = Integer.parseInt(conf.get("qtd"));
 
-            if (topN.size() > qtd) {
-                    topN.remove(topN.firstKey());
-            }
-        }
+			String[] words = value.toString().toLowerCase().split("\t") ;
+			if (words.length < 2) {
+				return;
+			}
 
-        @Override
-        protected void cleanup(Context context) throws IOException,
-                InterruptedException {
-            for (Text t : topN.values()) {
-                context.write(NullWritable.get(), t);
-            }
-        }
-    }
-    public static class TopNReducer extends
-            Reducer<NullWritable, Text, NullWritable, Text> {
+			topN.put(Integer.parseInt(words[1].toLowerCase()), new Text(value));
 
-        private TreeMap<Integer, Text> topN = new TreeMap<>();
+			if (topN.size() > qtd) {
+				topN.remove(topN.firstKey());
+			}
+		}
 
-        @Override
-        public void reduce(NullWritable key, Iterable<Text> values,
-                           Context context) throws IOException, InterruptedException {
-            for (Text value : values) {
-                String[] words = value.toString().toLowerCase().split("\t") ;
-                
-                Configuration conf = context.getConfiguration();
-                int qtd = Integer.parseInt(conf.get("qtd"));
+		@Override
+		protected void cleanup(Context context) throws IOException,
+		InterruptedException {
+			for (Text t : topN.values()) {
+				context.write(NullWritable.get(), t);
+			}
+		}
+	}
+	
+	public static class TopNReducer extends Reducer<NullWritable, Text, NullWritable, Text> {
 
-                topN.put(Integer.parseInt(words[1].toLowerCase()),
-                    new Text(value));
+		private TreeMap<Integer, Text> topN = new TreeMap<>();
 
-                if (topN.size() > qtd) {
-                    topN.remove(topN.firstKey());
-                }
-            }
+		@Override
+		public void reduce(NullWritable key, Iterable<Text> values,
+				Context context) throws IOException, InterruptedException {
+			for (Text value : values) {
+				String[] words = value.toString().toLowerCase().split("\t") ;
 
-            for (Text word : topN.descendingMap().values()) {
-                context.write(NullWritable.get(), word);
-            }
-        }
-    }
+				Configuration conf = context.getConfiguration();
+				int qtd = Integer.parseInt(conf.get("qtd"));
 
-    @Override
-    public int run(String[] args) throws Exception {
-        Configuration conf = getConf();
-              
-        conf.set("qtd", args[2]);
-        
-        Job job = Job.getInstance(conf);
-        job.setJarByClass(TopNHashTag.class);
-        job.setMapperClass(TopNMapper.class);
-        job.setReducerClass(TopNReducer.class);
-        job.setOutputKeyClass(NullWritable.class);
-        job.setOutputValueClass(Text.class);
-        job.setNumReduceTasks(1);
-        
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+				topN.put(Integer.parseInt(words[1].toLowerCase()),
+						new Text(value));
 
-        return (job.waitForCompletion(true) ? 0 : 1);
-    }
+				if (topN.size() > qtd) {
+					topN.remove(topN.firstKey());
+				}
+			}
 
-    public static void main(String[] args) throws Exception {
-        int exitCode = ToolRunner.run(new TopNHashTag(), args);
-        System.exit(exitCode);
-    }
+			for (Text word : topN.descendingMap().values()) {
+				context.write(NullWritable.get(), word);
+			}
+		}
+	}
+
+	@Override
+	public int run(String[] args) throws Exception {
+		Configuration conf = getConf();
+
+		conf.set("qtd", args[2]);
+
+		Job job = Job.getInstance(conf);
+		job.setJarByClass(TopNHashTag.class);
+		job.setMapperClass(TopNMapper.class);
+		job.setReducerClass(TopNReducer.class);
+		job.setOutputKeyClass(NullWritable.class);
+		job.setOutputValueClass(Text.class);
+		job.setNumReduceTasks(1);
+
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+		return (job.waitForCompletion(true) ? 0 : 1);
+	}
+
+	public static void main(String[] args) throws Exception {
+		int exitCode = ToolRunner.run(new TopNHashTag(), args);
+		System.exit(exitCode);
+	}
 }

@@ -17,50 +17,48 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class ContadorHashTag extends Configured implements Tool
 {
-    public static class ContadorHashTagMapper
-            extends Mapper<Object, Text, Text, IntWritable>
-    {
-        private final static IntWritable one = new IntWritable(1);
-        private Text word = new Text();
+	public static class ContadorHashTagMapper extends Mapper<Object, Text, Text, IntWritable>{
+		private final static IntWritable one = new IntWritable(1);
+		private Text word = new Text();
 
-        private String hashtagRegExp = "(?:\\s|\\A|^)[##]+([A-Za-z0-9-_]+)";
+		private String hashtagRegExp = "(?:\\s|\\A|^)[##]+([A-Za-z0-9-_]+)";
 
-        public void map(Object key, Text value, Context context)
-                throws IOException, InterruptedException {
-            String[] words = value.toString().split(" ") ;
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] words = value.toString().split(" ") ;
 
-            for (String str: words)
-            {
-                if (str.matches(hashtagRegExp)) {
-                    word.set(str);
-                    context.write(word, one);
-                }
-            }
-        }
-    }
+			for (String str: words)
+			{
+				if (str.matches(hashtagRegExp)) {
+					word.set(str);
+					context.write(word, one);
+				}
+			}
+		}
+	}
 
-    public int run(String[] args) throws Exception {
-        Configuration conf = getConf();
+	public int run(String[] args) throws Exception {
+		Configuration conf = getConf();
 
-        //args = new GenericOptionsParser(conf, args).getRemainingArgs();
+		//args = new GenericOptionsParser(conf, args).getRemainingArgs();
 
-        Job job = Job.getInstance(conf);
+		Job job = Job.getInstance(conf);
 
-        job.setJarByClass(ContadorHashTag.class);
-        job.setMapperClass(ContadorHashTagMapper.class);
-        job.setCombinerClass(IntSumReducer.class);
-        job.setReducerClass(IntSumReducer.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+		job.setJarByClass(ContadorHashTag.class);
+		job.setMapperClass(ContadorHashTagMapper.class);
+		job.setCombinerClass(IntSumReducer.class);
+		job.setReducerClass(IntSumReducer.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
 
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
-        return (job.waitForCompletion(true) ? 0 : 1);
-    }
+		return (job.waitForCompletion(true) ? 0 : 1);
+	}
 
-    public static void main(String[] args) throws Exception {
-        int exitCode = ToolRunner.run(new ContadorHashTag(), args);
-        System.exit(exitCode);
-    }
+	public static void main(String[] args) throws Exception {
+		int exitCode = ToolRunner.run(new ContadorHashTag(), args);
+		System.exit(exitCode);
+	}
 }
